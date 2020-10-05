@@ -446,8 +446,31 @@ wob_draw_percentage(const struct wob_geom *geom, uint32_t *argb, struct wob_colo
 	size_t offset_border_padding = geom->border_offset + geom->border_size + geom->bar_padding;
 	size_t bar_width = geom->width - 2 * offset_border_padding;
 	size_t bar_height = geom->height - 2 * offset_border_padding;
-	size_t bar_colored_width = (bar_width * percentage) / maximum;
+    if (bar_width < bar_height) {
 
+	size_t bar_colored_height = (bar_height * percentage) / maximum;
+	// draw 1px vertical line
+	uint32_t *start, *end, *pixel;
+	start = &argb[offset_border_padding * (geom->height + 1)];
+	end = start + bar_colored_height;
+	for (pixel = start; pixel < end; ++pixel) {
+		*pixel = argb_bar_color;
+	}
+	for (end = start + bar_height; pixel < end; ++pixel) {
+		*pixel = argb_background_color;
+	}
+
+	// copy it to make full percentage bar
+	uint32_t *source = &argb[offset_border_padding * geom->height];
+	uint32_t *destination = source + geom->height;
+	end = &argb[geom->height * (bar_height + offset_border_padding)];
+	while (destination != end) {
+		memcpy(destination, source, MIN(destination - source, end - destination) * sizeof(uint32_t));
+		destination += MIN(destination - source, end - destination);
+	}
+} else {
+
+	size_t bar_colored_width = (bar_width * percentage) / maximum;
 	// draw 1px horizontal line
 	uint32_t *start, *end, *pixel;
 	start = &argb[offset_border_padding * (geom->width + 1)];
@@ -467,6 +490,7 @@ wob_draw_percentage(const struct wob_geom *geom, uint32_t *argb, struct wob_colo
 		memcpy(destination, source, MIN(destination - source, end - destination) * sizeof(uint32_t));
 		destination += MIN(destination - source, end - destination);
 	}
+}
 }
 
 int
